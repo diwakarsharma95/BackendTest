@@ -2,6 +2,7 @@
 const AWS = require('aws-sdk');
 const db = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
 const uuid = require('uuid/v4');
+const request = require('request');
 
 const postsTable = process.env.POSTS_TABLE;
 // Create a response
@@ -16,39 +17,53 @@ function sortByDate(a, b) {
 		return -1;
 	} else return 1;
 }
+//
+//
 // Create a post
+//
+//
+
 module.exports.createPost = (event, context, callback) => {
 	const reqBody = JSON.parse(event.body);
 
-	if (!reqBody.message || reqBody.message.trim() === '' || !reqBody.body || reqBody.body.trim() === '') {
-		return callback(
-			null,
-			response(400, {
-				error: 'Post must have a message and body and they must not be empty',
-			}),
-		);
-	}
+	let url = 'https://dog.ceo/api/breeds/image/random';
 
-	const post = {
-		id: uuid(),
-		createdAt: new Date().toISOString(),
-		userId: 1,
-		message: reqBody.message,
-		body: reqBody.body,
-	};
+	let options = { json: true };
+	request(url, options, (error, res, body) => {
+		if (error) {
+			return console.log(error);
+		}
+		const breed = body.message.split('/');
 
-	return db
-		.put({
-			TableName: postsTable,
-			Item: post,
-		})
-		.promise()
-		.then(() => {
-			callback(null, response(201, post));
-		})
-		.catch((err) => response(null, response(err.statusCode, err)));
+		// breeds = []
+
+		if (!error && res.statusCode == 200) {
+			const post = {
+				id: uuid(),
+				name: breed[4],
+				createdAt: new Date().toISOString(),
+				message: body.message,
+				status: body.status,
+			};
+
+			return db
+				.put({
+					TableName: postsTable,
+					Item: post,
+				})
+				.promise()
+				.then(() => {
+					callback(null, response(201, post));
+				})
+				.catch((err) => response(null, response(err.statusCode, err)));
+		}
+	});
 };
+//
+//
 // Get all posts
+//
+//
 module.exports.getAllPosts = (event, context, callback) => {
 	return db
 		.scan({
@@ -60,22 +75,31 @@ module.exports.getAllPosts = (event, context, callback) => {
 		})
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };
+//
+//
 // Get number of posts
-module.exports.getPosts = (event, context, callback) => {
-	const numberOfPosts = event.pathParameters.number;
-	const params = {
-		TableName: postsTable,
-		Limit: numberOfPosts,
-	};
-	return db
-		.scan(params)
-		.promise()
-		.then((res) => {
-			callback(null, response(200, res.Items.sort(sortByDate)));
-		})
-		.catch((err) => callback(null, response(err.statusCode, err)));
-};
+//
+//
+// module.exports.getPosts = (event, context, callback) => {
+// 	const numberOfPosts = event.pathParameters.number;
+// 	const params = {
+// 		TableName: postsTable,
+// 		Limit: numberOfPosts,
+// 	};
+// 	return db
+// 		.scan(params)
+// 		.promise()
+// 		.then((res) => {
+// 			callback(null, response(200, res.Items.sort(sortByDate)));
+// 		})
+// 		.catch((err) => callback(null, response(err.statusCode, err)));
+// };
+//
+//
 // Get a single post
+//
+//
+
 module.exports.getPost = (event, context, callback) => {
 	const id = event.pathParameters.id;
 
@@ -95,37 +119,62 @@ module.exports.getPost = (event, context, callback) => {
 		})
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };
-// Update a post
-module.exports.updatePost = (event, context, callback) => {
-	const id = event.pathParameters.id;
-	const reqBody = JSON.parse(event.body);
-	const { body, message } = reqBody;
+
+// Get a Name
+module.exports.getPostByName = (event, context, callback) => {
+	const name = event.pathParameters.name;
 
 	const params = {
 		Key: {
-			id: id,
+			name: name,
 		},
 		TableName: postsTable,
-		ConditionExpression: 'attribute_exists(id)',
-		UpdateExpression: 'SET message = :message, body = :body',
-		ExpressionAttributeValues: {
-			':message': message,
-			':body': body,
-		},
-		ReturnValues: 'ALL_NEW',
 	};
-	console.log('Updating');
 
 	return db
-		.update(params)
+		.get(params)
 		.promise()
 		.then((res) => {
-			console.log(res);
-			callback(null, response(200, res.Attributes));
+			if (res.Item) callback(null, response(200, res.Item));
+			else callback(null, response(404, { error: 'Post not found' }));
 		})
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };
+// // Update a post
+// module.exports.updatePost = (event, context, callback) => {
+// 	const id = event.pathParameters.id;
+// 	const reqBody = JSON.parse(event.body);
+// 	const { body, message } = reqBody;
+
+// 	const params = {
+// 		Key: {
+// 			id: id,
+// 		},
+// 		TableName: postsTable,
+// 		ConditionExpression: 'attribute_exists(id)',
+// 		UpdateExpression: 'SET message = :message, body = :body',
+// 		ExpressionAttributeValues: {
+// 			':message': message,
+// 			':body': body,
+// 		},
+// 		ReturnValues: 'ALL_NEW',
+// 	};
+// 	console.log('Updating');
+
+// 	return db
+// 		.update(params)
+// 		.promise()
+// 		.then((res) => {
+// 			console.log(res);
+// 			callback(null, response(200, res.Attributes));
+// 		})
+// 		.catch((err) => callback(null, response(err.statusCode, err)));
+// };
+//
+//
 // Delete a post
+//
+//
 module.exports.deletePost = (event, context, callback) => {
 	const id = event.pathParameters.id;
 	const params = {
