@@ -34,24 +34,24 @@ functions:
             - http:
                   path: /posts
                   method: get
-    # getPosts:
-    #     handler: handler.getPosts
-    #     events:
-    #         - http:
-    #               path: /posts/{number}
-    #               method: get
+    getPosts:
+        handler: handler.getPosts
+        events:
+            - http:
+                  path: /posts/{number}
+                  method: get
     getPost:
         handler: handler.getPost
         events:
             - http:
                   path: /post/{id}
                   method: get
-    getPostByName:
-        handler: handler.getPostByName
-        events:
-            - http:
-                  path: /post/breed/{name}
-                  method: get
+    # getPostByName:
+    #     handler: handler.getPostByName
+    #     events:
+    #         - http:
+    #               path: /post/breed/{name}
+    #               method: get
     updatePost:
         handler: handler.updatePost
         events:
@@ -73,7 +73,7 @@ resources:
                 AttributeDefinitions:
                     - AttributeName: 'id'
                       AttributeType: 'S'
-                    # - AttributeName: 'Name'
+                    # - AttributeName: 'name'
                     #   AttributeType: 'S'
                 KeySchema:
                     - AttributeName: 'id'

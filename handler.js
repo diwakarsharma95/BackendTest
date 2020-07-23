@@ -1,8 +1,10 @@
 'use strict';
 const AWS = require('aws-sdk');
-const db = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
+const db = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
 const uuid = require('uuid/v4');
 const request = require('request');
+const axios = require('axios');
+const express = require('express');
 
 const postsTable = process.env.POSTS_TABLE;
 // Create a response
@@ -17,47 +19,46 @@ function sortByDate(a, b) {
 		return -1;
 	} else return 1;
 }
+/****************** npm install -g serverless;
+ ********************serverless deploy ***************************/
 //
 //
 // Create a post
 //
 //
-
 module.exports.createPost = (event, context, callback) => {
-	const reqBody = JSON.parse(event.body);
+	//Code to upload file to s3 bucket
+	(async () => {
+		try {
+			// fetch data from a url endpoint
+			var s3 = new AWS.S3();
+			const response = await axios.get('https://dog.ceo/api/breeds/image/random');
 
-	let url = 'https://dog.ceo/api/breeds/image/random';
+			const breed = response.data.message.split('/');
 
-	let options = { json: true };
-	request(url, options, (error, res, body) => {
-		if (error) {
-			return console.log(error);
-		}
-		const breed = body.message.split('/');
-
-		// breeds = []
-
-		if (!error && res.statusCode == 200) {
-			const post = {
-				id: uuid(),
-				name: breed[4],
-				createdAt: new Date().toISOString(),
-				message: body.message,
-				status: body.status,
+			const uploadFileToS3 = (url, bucket, key) => {
+				return axios.get(url, {responseType: 'arraybuffer', responseEncoding: 'binary'}).then((response) => {
+					const params = {
+						ContentType: response.headers['content-type'],
+						ContentLength: response.data.length.toString(), // or response.header["content-length"] if available for the type of file downloaded
+						Bucket: bucket,
+						Body: response.data,
+						Key: key,
+					};
+					return s3.putObject(params).promise();
+				});
 			};
 
-			return db
-				.put({
-					TableName: postsTable,
-					Item: post,
-				})
-				.promise()
-				.then(() => {
-					callback(null, response(201, post));
-				})
-				.catch((err) => response(null, response(err.statusCode, err)));
+			uploadFileToS3(`${response.data.message}`, 'backendpics', `${breed[4]}.jpg`)
+				.then(() => console.log('File saved!'))
+				.catch((error) => console.log(error));
+
+			// return response;
+		} catch (error) {
+			console.log('error', error);
+			// appropriately handle the error
 		}
-	});
+	})();
 };
 //
 //
@@ -115,7 +116,7 @@ module.exports.getPost = (event, context, callback) => {
 		.promise()
 		.then((res) => {
 			if (res.Item) callback(null, response(200, res.Item));
-			else callback(null, response(404, { error: 'Post not found' }));
+			else callback(null, response(404, {error: 'Post not found'}));
 		})
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };
@@ -136,7 +137,7 @@ module.exports.getPostByName = (event, context, callback) => {
 		.promise()
 		.then((res) => {
 			if (res.Item) callback(null, response(200, res.Item));
-			else callback(null, response(404, { error: 'Post not found' }));
+			else callback(null, response(404, {error: 'Post not found'}));
 		})
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };
@@ -186,6 +187,6 @@ module.exports.deletePost = (event, context, callback) => {
 	return db
 		.delete(params)
 		.promise()
-		.then(() => callback(null, response(200, { message: 'Post deleted successfully' })))
+		.then(() => callback(null, response(200, {message: 'Post deleted successfully'})))
 		.catch((err) => callback(null, response(err.statusCode, err)));
 };

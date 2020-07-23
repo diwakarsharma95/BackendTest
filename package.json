@@ -10,8 +10,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.716.0",
+    "axios": "^0.19.2",
+    "express": "^4.17.1",
     "node-fetch": "^2.6.0",
     "request": "^2.88.2",
     "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "serverless-deployment-bucket": "^1.1.2"
   }
 }
