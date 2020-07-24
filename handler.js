@@ -21,11 +21,7 @@ function sortByDate(a, b) {
 }
 /****************** npm install -g serverless;
  ********************serverless deploy ***************************/
-//
-//
-// Create a post
-//
-//
+
 module.exports.createPost = (event, context, callback) => {
 	//Code to upload file to s3 bucket
 	(async () => {
@@ -51,15 +47,54 @@ module.exports.createPost = (event, context, callback) => {
 
 			uploadFileToS3(`${response.data.message}`, 'backendpics', `${breed[4]}.jpg`)
 				.then(() => console.log('File saved!'))
-				.catch((error) => console.log(error));
+				.catch((error) => callback(error));
 
 			// return response;
 		} catch (error) {
-			console.log('error', error);
+			callback('error', error);
 			// appropriately handle the error
 		}
 	})();
 };
+//
+//
+// Create a post
+//
+//
+// module.exports.createPost = (event, context, callback) => {
+// 	//Code to upload file to s3 bucket
+// 	(async () => {
+// 		try {
+// 			// fetch data from a url endpoint
+// 			var s3 = new AWS.S3();
+// 			const response = await axios.get('https://dog.ceo/api/breeds/image/random');
+
+// 			const breed = response.data.message.split('/');
+
+// 			const uploadFileToS3 = (url, bucket, key) => {
+// 				return axios.get(url, {responseType: 'arraybuffer', responseEncoding: 'binary'}).then((response) => {
+// 					const params = {
+// 						ContentType: response.headers['content-type'],
+// 						ContentLength: response.data.length.toString(), // or response.header["content-length"] if available for the type of file downloaded
+// 						Bucket: bucket,
+// 						Body: response.data,
+// 						Key: key,
+// 					};
+// 					return s3.putObject(params).promise();
+// 				});
+// 			};
+
+// 			uploadFileToS3(`${response.data.message}`, 'backendpics', `${breed[4]}.jpg`)
+// 				.then(() => console.log('File saved!'))
+// 				.catch((error) => console.log(error));
+
+// 			// return response;
+// 		} catch (error) {
+// 			console.log('error', error);
+// 			// appropriately handle the error
+// 		}
+// 	})();
+// };
 //
 //
 // Get all posts
